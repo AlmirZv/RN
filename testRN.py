@@ -29,7 +29,10 @@ class Window(QMainWindow):
                 'index': row,
                 'changed': lambda index: self.refreshCount(index, row)
             }
-            c.setCurrentIndex(row)
+            if row < 5:
+                c.setCurrentIndex(row)
+            else:
+                c.setCurrentIndex(4)
             c.currentIndexChanged[str].connect(
                 box['changed'])
             return box
@@ -51,18 +54,69 @@ class Window(QMainWindow):
         self.setCentralWidget(self.tableView)
         self.iCols = int(self.tableView.model().columnCount())
         self.iRows = int(self.tableView.model().rowCount())
+        self.RowHeight = int(self.tableView.rowHeight(0))
 
         for row in range(self.rows_number):
             i = row
             self.tableView.setIndexWidget(
                 self.tableView.model().index(row, 0), self.combo_boxes[row]['box'])
 
+        # График
+        self.graphWidget = pg.PlotWidget(self)
+        self.graphWidget.resize(490, 325)
+        self.oy = ((self.iRows+1)*self.RowHeight+5)
+        self.graphWidget.move(15, self.oy)
+
+        # selected cols
+        self.tableView.selectionModel().selectionChanged.connect(self.on_selectionChanged)
+
+        self.xo = []
+        self.yo = []
+
+        self.main_text = QtWidgets.QLabel(self)
+        self.main_text.setText(f"x: {self.xo} \ny: {self.yo}")
+        # установка положения текста
+        self.main_text.move(15, self.oy+330)
+        self.main_text.setGeometry(15, self.oy+300, 500, 90)
+        # self.main_text.adjustSize()  # корректировка текста с размером окна
+
+    def on_selectionChanged(self, selected):
+        z = 0
+        x = []
+        for index in selected.indexes():
+            r = int(index.row())
+            c = int(index.column())
+            if index.data() == None:
+                pass
+            else:
+                d = float(index.data())
+                z += 1
+                print("row-", r, ",col-", c, ",data-", d)
+                x.append(d)
+            if z == self.iRows:
+                if self.xo == []:
+                    self.xo = x
+                    self.main_text.setText(f"x:{self.xo} \ny:{self.yo}")
+                elif self.yo == []:
+                    self.yo = x
+                    self.graphWidget.clear()
+                    self.graphWidget.plot(
+                        self.xo, self.yo, symbol='+', symbolSize=15, symbolBrush=('w'))
+                    self.main_text.setText(f"x:{self.xo} \ny:{self.yo}")
+
+                elif self.xo != [] and self.yo != []:
+                    self.xo = self.yo
+                    self.yo = x
+                    self.graphWidget.clear()
+                    self.graphWidget.plot(
+                        self.xo, self.yo, symbol='+', symbolSize=15, symbolBrush=('w'))
+                    self.main_text.setText(f"x:{self.xo} \ny:{self.yo}")
+                print("x", self.xo)
+                print("y", self.yo)
+
     # Функция кнопки пересчета №2
 
     def refreshCount(self, value, row_index):
-        print("--------------------------")
-        print(row_index, " Row, Value is - ", value)
-        print("--------------------------")
         # формула площади круга * на рандомное значение от (-1,1)
         y = np.power(int(value), 2)*np.pi*np.random.uniform(-1, 1)
         y = np.around(y, decimals=2)  # округление до двух знаков
@@ -82,10 +136,6 @@ class Window(QMainWindow):
         for n in range(0, self.rows_number):
             perv_stolb.append(self.combo_boxes[n]['box'].currentText())
             data2[n] = float(self.tableView.model().item(n, 1).text())
-            print("--------------------------")
-            print(self.data)
-            print(data2)
-            print("--------------------------")
             if all(self.data != data2) == True:
                 self.data = data2
                 data2 = data2.reshape(1, self.rows_number)
@@ -104,48 +154,9 @@ class Window(QMainWindow):
                     self.main_data = np.concatenate(
                         [self.main_data, data2], dtype=float)
                     self.changeTable(perv_stolb2[0], data2)
-                print("--------------------------")
-                print(self.main_data)
-                print(np.shape(self.main_data))
-                print("--------------------------")
-                print(self.data)
-                print(data2)
-                print("--------------------------")
-            else:
-                print(all(self.data != data2))
-        print(perv_stolb)
-        """data2 = self.data2
-        data2[row_index] = y1
-        print(data2)
-        print("--------------------------")
-        print(self.data)
-        if all(self.data != data2) == True:
-            self.data = data2
-            print("--------------------------")
-            print(self.data)
-            print(data2)
-            print("--------------------------")
-        else:
-            print(all(self.data != data2))
-        for n in range(0, self.rows_number):
-            print("--------------------------")
-            # print(self.combo_boxes[n]['box'].currentText())
-            #data2[n] = float(self.tableView.model().item(n, 1).text())
-            print(data2)
-            #print(self.tableView.model().item(n, 1).text(), "!=", self.data[n])
-            print(self.data)"""
 
     def changeTable(self, perv_stolb2, data2):
-        print("============================================")
-        print(perv_stolb2)
-        print(data2)
-        print("main_data_new:")
-        print(self.main_data)
-        print("============================================")
-        new_row = len(self.main_data[0])
         new_col = int(self.tableView.model().columnCount())
-        #model = QtGui.QStandardItemModel(new_row, new_col)
-        #self.tableView.model().insertColumns(self.iCols, len(self.main_data))
         for row in range(self.rows_number):
             self.tableView.model().setItem(
                 row, (new_col), QtGui.QStandardItem(str(perv_stolb2[row])))
@@ -160,19 +171,6 @@ class Window(QMainWindow):
             elif x1 >= 0:
                 # задание 1.8: окраска положительных значений в зеленый
                 x.setBackground(QtGui.QColor('green'))
-
-            """y = np.power(int(value), 2)*np.pi*np.random.uniform(-1, 1)
-            y = np.around(y, decimals=2)  # округление до двух знаков
-            y1 = y
-
-            y = QtGui.QStandardItem(str(y))
-            self.tableView.model().setItem(row_index, 1, y)
-            if y1 < 0:
-                # задание 1.8: окраска отрицательных значений в красный
-                y.setBackground(QtGui.QColor('red'))
-            elif y1 >= 0:
-                # задание 1.8: окраска положительных значений в зеленый
-                y.setBackground(QtGui.QColor('green'))"""
 
 
 if __name__ == '__main__':
