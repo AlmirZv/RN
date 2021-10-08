@@ -55,11 +55,14 @@ class Window(QMainWindow):
         self.iCols = int(self.tableView.model().columnCount())
         self.iRows = int(self.tableView.model().rowCount())
         self.RowHeight = int(self.tableView.rowHeight(0))
+        # self.tableView.setEditTriggers(EnableEditTriggers)
 
         for row in range(self.rows_number):
             i = row
             self.tableView.setIndexWidget(
                 self.tableView.model().index(row, 0), self.combo_boxes[row]['box'])
+
+        self.tableView.model().dataChanged.connect(self.itemChanged)
 
         # График
         self.graphWidget = pg.PlotWidget(self)
@@ -80,41 +83,67 @@ class Window(QMainWindow):
         self.main_text.setGeometry(15, self.oy+300, 500, 90)
         # self.main_text.adjustSize()  # корректировка текста с размером окна
 
-    def on_selectionChanged(self, selected):
-        z = 0
-        x = []
-        for index in selected.indexes():
-            r = int(index.row())
-            c = int(index.column())
-            if index.data() == None:
-                pass
+        self.selected_cols = np.zeros((1, 2))
+
+    def itemChanged(self, selected):
+
+        try:
+            y = float(selected.data())
+            self.main_data[selected.column()-2][selected.row()] = y
+            selected.model().item(selected.row(), selected.column()
+                                  ).setData(str(y))
+            if y < 0 and selected.column() >= 2:
+                # задание 1.8: окраска отрицательных значений в красный
+                selected.model().item(selected.row(), selected.column()
+                                      ).setBackground(QtGui.QColor('red'))
+            elif y >= 0 and selected.column() >= 2:
+                # задание 1.8: окраска положительных значений в зеленый
+                selected.model().item(selected.row(), selected.column()
+                                      ).setBackground(QtGui.QColor('green'))
+        except:
+            selected.model().item(selected.row(), selected.column()
+                                  ).setData(str(self.main_data[selected.column()-2][selected.row()]))
+
+        """
+        try:
+            y = float(selected.data())
+            self.statusBar().showMessage('OK')
+            if selected.column() >= 2:
+                self.main_data[selected.column()-2][selected.row()] = y
+                y = QtGui.QStandardItem(selected.data())
+                #self.tableView.model().setItem(selected.row(), selected.column(), y)
+        except:
+            if selected.column() >= 2:
+                y = self.main_data[selected.column()-2][selected.row()]
+                y = QtGui.QStandardItem(str(y))
+                self.tableView.model().setItem(selected.row(), selected.column(), y)
             else:
-                d = float(index.data())
-                z += 1
-                print("row-", r, ",col-", c, ",data-", d)
-                x.append(d)
-            if z == self.iRows:
-                if self.xo == []:
-                    self.xo = x
-                    self.main_text.setText(f"x:{self.xo} \ny:{self.yo}")
-                elif self.yo == []:
-                    self.yo = x
-                    self.graphWidget.clear()
-                    self.graphWidget.plot(
-                        self.xo, self.yo, symbol='+', symbolSize=15, symbolBrush=('w'))
-                    self.main_text.setText(f"x:{self.xo} \ny:{self.yo}")
+                y = 1
+                y = QtGui.QStandardItem(str(y))
+                self.tableView.model().setItem(selected.row(), selected.column(), y)
+            self.statusBar().showMessage('ERROR')
+        if float(selected.data()) < 0 and selected.column() >= 2:
+            # задание 1.8: окраска отрицательных значений в красный
+            y.setBackground(QtGui.QColor('red'))
+        elif float(selected.data()) >= 0 and selected.column() >= 2:
+            # задание 1.8: окраска положительных значений в зеленый
+            y.setBackground(QtGui.QColor('green'))
+            """
 
-                elif self.xo != [] and self.yo != []:
-                    self.xo = self.yo
-                    self.yo = x
-                    self.graphWidget.clear()
-                    self.graphWidget.plot(
-                        self.xo, self.yo, symbol='+', symbolSize=15, symbolBrush=('w'))
-                    self.main_text.setText(f"x:{self.xo} \ny:{self.yo}")
-                print("x", self.xo)
-                print("y", self.yo)
+    def on_selectionChanged(self, selected):
+        sc = self.selected_cols
+        col = np.array([index.column() for index in selected.indexes()])
+        if (len(col) == self.rows_number and np.mean(col, axis=0) == col[0] and sc[0][-1] != col[0] and col[0] >= 2):
+            sc[0] = np.roll(sc[0], -1)
+            sc[0][-1] = col[0]
+            x = self.main_data[(int(sc[0][0])-2)]
+            y = self.main_data[(int(sc[0][1])-2)]
+            self.graphWidget.clear()
+            self.main_text.setText(f"x:{x} \ny:{y}")
+            self.graphWidget.plot(
+                x, y, symbol='+', symbolSize=15, symbolBrush=('w'))
 
-    # Функция кнопки пересчета №2
+    # Функция кнопки перерасчета
 
     def refreshCount(self, value, row_index):
         # формула площади круга * на рандомное значение от (-1,1)
