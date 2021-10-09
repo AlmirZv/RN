@@ -109,19 +109,30 @@ class Window(QMainWindow):
         if selected.column() >= 1:
             try:
                 y = float(selected.data())
-                self.main_data[selected.column()][selected.row()] = y
-                selected.model().item(selected.row(), selected.column()
-                                      ).setData(str(y))
-                if y < 0:
-                    # задание 1.8: окраска отрицательных значений в красный
+                if selected.column() >= 2:
+                    self.main_data[selected.column()][selected.row()] = y
                     selected.model().item(selected.row(), selected.column()
-                                          ).setBackground(QtGui.QColor('red'))
-                elif y >= 0:
-                    # задание 1.8: окраска положительных значений в зеленый
-                    selected.model().item(selected.row(), selected.column()
-                                          ).setBackground(QtGui.QColor('green'))
+                                          ).setData(str(y))
+                    if y < 0 and selected.column() >= 2:
+                        # задание 1.8: окраска отрицательных значений в красный
+                        selected.model().item(selected.row(), selected.column()
+                                              ).setBackground(QtGui.QColor('red'))
+                    elif y >= 0 and selected.column() >= 2:
+                        # задание 1.8: окраска положительных значений в зеленый
+                        selected.model().item(selected.row(), selected.column()
+                                              ).setBackground(QtGui.QColor('green'))
+                else:
+                    if y < 0:
+                        # задание 1.8: окраска отрицательных значений в красный
+                        selected.model().item(selected.row(), selected.column()
+                                              ).setBackground(QtGui.QColor('red'))
+                    elif y >= 0:
+                        # задание 1.8: окраска положительных значений в зеленый
+                        selected.model().item(selected.row(), selected.column()
+                                              ).setBackground(QtGui.QColor('green'))
             except:
                 self.statusBar().showMessage("Вводить можно только цифровые значения")
+                #selected.model().item(selected.row(), selected.column()).setData(str(self.main_data[selected.column()][selected.row()]))
                 y = self.main_data[selected.column()][selected.row()]
                 y = QtGui.QStandardItem(str(y))
                 self.tableView.model().setItem(selected.row(), selected.column(), y)
